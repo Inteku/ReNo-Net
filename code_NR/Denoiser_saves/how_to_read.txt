@@ -1,0 +1,8 @@
+How to read
+DN1_071223(2)_10*
+
+DN1: Model version
+071223: date of training
+(2): third training run of the day
+10: after epoch 10
+*: new best validation loss
