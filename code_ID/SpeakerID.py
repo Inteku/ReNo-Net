@@ -14,16 +14,19 @@ class Identifier_v1(nn.Module):
         
         self.Layers = nn.ModuleList(self.Layers)
 
-        self.Activations = [torch.relu,
-                            torch.relu,
-                            torch.relu,
-                            nn.Softmax()]
+        self.Activations = [nn.ReLU(),
+                            nn.ReLU(),
+                            nn.ReLU(),
+                            nn.Softmax(dim=-1)]
     #def softmx(self, input):
     #    return torch.nn.functional.softmax(input)
 
     def forward(self, x):
-        for L, A in zip(self.Layers, self.Activations):
-            x = L(x)
+        #debug = [x.clone()]
+        for L, A in zip(self.Layers, self.Activations):        
+            x = L(x)            
             x = A(x)
+            #debug.append(x.clone())
 
-        return x    
+
+        return x #debug, x    

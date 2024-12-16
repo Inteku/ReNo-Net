@@ -22,8 +22,8 @@ error_no_nr = [0]*S
 error_baseline = [0]*S
 error_nn = [0]*S
 for s in range(S):
-    if s == 1:
-        continue
+    # s == 1:
+    #  continue
     sample, cos_sim = testset[s]
     y = sample[0]
     x = sample[1:]

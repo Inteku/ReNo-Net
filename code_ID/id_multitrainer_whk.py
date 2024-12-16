@@ -6,6 +6,7 @@ import numpy as np
 import timeit
 from math import ceil
 from IdentificationDataset import CleanID, FeatureFusionID, DereverberID, SingleNodeID
+from IdentificationDataset2 import NoisyID
 import SpeakerID
 from utilities import print_batch_loss, accuracy
 import matplotlib as mpl
@@ -21,6 +22,7 @@ dr2_version = "siamese"
 dr1_path = "/home/student/Documents/WHK_Projekt_1/code_DR/Dereverber_saves/050724_siam1Layer_noDEC/DR_CAE-encoding/DR_cae_ep15*"
 dr2_path = "/home/student/Documents/WHK_Projekt_1/code_DR/Dereverber_saves/050724_siam2Layer_noDEC/DR_CAE-encoding/DR_cae_ep18*"
 #load data
+'''
 train_set = CleanID(train=True)
 val_set_clean = CleanID(validation=True)
 val_set_ff = FeatureFusionID(validation=True)
@@ -31,6 +33,18 @@ test_set_clean = CleanID(test=True)
 test_set_ff = FeatureFusionID(test=True)
 test_set_dr1 = DereverberID(test=True, model_path=dr1_path, num_layers=1, model_version=dr1_version)
 test_set_dr2 = DereverberID(test=True, model_path=dr2_path, num_layers=2, model_version=dr2_version)
+'''
+
+train_set = CleanID(train=True)#NoisyID(clean=True, train=True)
+val_set_clean = NoisyID(clean=True, validation=True)
+val_set_ff = NoisyID(noiseReductionMethod='baseline', dereverberationMethod='baseline', validation=True)
+val_set_dr1 = NoisyID(noiseReductionMethod='baseline', dereverberationMethod='neural net', validation=True)
+val_set_dr2 = NoisyID(noiseReductionMethod='neural net', dereverberationMethod='neural net', validation=True)
+test_set_clean = NoisyID(clean=True, test=True)
+test_set_ff = NoisyID(noiseReductionMethod='baseline', dereverberationMethod='baseline', test=True)
+test_set_dr1 = NoisyID(noiseReductionMethod='baseline', dereverberationMethod='neural net', test=True)
+test_set_dr2 = NoisyID(noiseReductionMethod='neural net', dereverberationMethod='neural net', test=True)
+
 
 batch_size = 16
 num_batches = ceil(train_set.__len__()/batch_size)
@@ -64,7 +78,7 @@ global_accuracy_ff = np.asarray([0.0]*(epochs+1))
 global_accuracy_dr1 = np.asarray([0.0]*(epochs+1))
 global_accuracy_dr2 = np.asarray([0.0]*(epochs+1))
 
-K = 10
+K = 1
 clean_box = []
 ff_box = []
 dr1_box = []
@@ -73,13 +87,15 @@ dr2_box = []
 for k in range(K):
     #load network
     ID = SpeakerID.Identifier_v1()
-    optimizer = optim.Adam(ID.parameters(), lr=0.00002)
+    optimizer = optim.Adam(ID.parameters(), lr=1e-4)
 
     val_loss_progress_clean = np.asarray([0.0]*(epochs+1))
     accuracy_progress_clean = np.asarray([0.0]*(epochs+1))
     for idx, (v_inputs, v_targets) in enumerate(val_loader_clean):
         v_outputs = ID(v_inputs)
-        untrained_vloss_clean = criterion(v_outputs, v_targets.squeeze()).item()
+        #print(v_outputs.size(), v_targets.size())
+        #print(v_outputs.dtype, v_targets.dtype)
+        untrained_vloss_clean = criterion(v_outputs.squeeze(), v_targets).item()
         val_loss_progress_clean[0] = untrained_vloss_clean
         accuracy_progress_clean[0] = accuracy(v_outputs, v_targets)
 
@@ -88,7 +104,7 @@ for k in range(K):
     accuracy_progress_ff = np.asarray([0.0]*(epochs+1))
     for idx, (v_inputs, v_targets) in enumerate(val_loader_ff):
         v_outputs = ID(v_inputs)
-        untrained_vloss_ff = criterion(v_outputs, v_targets.squeeze()).item()
+        untrained_vloss_ff = criterion(v_outputs.squeeze(), v_targets).item()
         val_loss_progress_ff[0] = untrained_vloss_ff
         accuracy_progress_ff[0] = accuracy(v_outputs, v_targets)
 
@@ -98,7 +114,7 @@ for k in range(K):
     accuracy_progress_dr1 = np.asarray([0.0]*(epochs+1))
     for idx, (v_inputs, v_targets) in enumerate(val_loader_dr1):
         v_outputs = ID(v_inputs)
-        untrained_vloss_dr1 = criterion(v_outputs, v_targets.squeeze()).item()
+        untrained_vloss_dr1 = criterion(v_outputs.squeeze(), v_targets).item()
         val_loss_progress_dr1[0] = untrained_vloss_dr1
         accuracy_progress_dr1[0] = accuracy(v_outputs, v_targets)
 
@@ -108,7 +124,7 @@ for k in range(K):
     accuracy_progress_dr2 = np.asarray([0.0]*(epochs+1))
     for idx, (v_inputs, v_targets) in enumerate(val_loader_dr2):
         v_outputs = ID(v_inputs)
-        untrained_vloss_dr2 = criterion(v_outputs, v_targets.squeeze()).item()
+        untrained_vloss_dr2 = criterion(v_outputs.squeeze(), v_targets).item()
         val_loss_progress_dr2[0] = untrained_vloss_dr2
         accuracy_progress_dr2[0] = accuracy(v_outputs, v_targets)
 
@@ -127,7 +143,9 @@ for k in range(K):
         train_running_loss = 0
         for idx, (inputs, target) in enumerate(train_loader):
             output = ID(inputs)
-            Loss = criterion(output, target)
+            #print(output.size(), target.size())
+            #print(output.dtype, target.dtype)
+            Loss = criterion(output.squeeze(), target)
 
             train_running_loss += Loss.item()
             Loss.backward()
@@ -152,22 +170,22 @@ for k in range(K):
 
         for idx, (v_inputs, v_targets) in enumerate(val_loader_clean):
             v_outputs = ID(v_inputs)
-            val_loss_progress_clean[e+1] = criterion(v_outputs, v_targets.squeeze()).item()
+            val_loss_progress_clean[e+1] = criterion(v_outputs.squeeze(), v_targets).item()
             accuracy_progress_clean[e+1] = accuracy(v_outputs, v_targets)
 
         for idx, (v_inputs, v_targets) in enumerate(val_loader_ff):
             v_outputs = ID(v_inputs)
-            val_loss_progress_ff[e+1] = criterion(v_outputs, v_targets.squeeze()).item()
+            val_loss_progress_ff[e+1] = criterion(v_outputs.squeeze(), v_targets).item()
             accuracy_progress_ff[e+1] = accuracy(v_outputs, v_targets)
 
         for idx, (v_inputs, v_targets) in enumerate(val_loader_dr1):
             v_outputs = ID(v_inputs)
-            val_loss_progress_dr1[e+1] = criterion(v_outputs, v_targets.squeeze()).item()
+            val_loss_progress_dr1[e+1] = criterion(v_outputs.squeeze(), v_targets).item()
             accuracy_progress_dr1[e+1] = accuracy(v_outputs, v_targets)
 
         for idx, (v_inputs, v_targets) in enumerate(val_loader_dr2):
             v_outputs = ID(v_inputs)
-            val_loss_progress_dr2[e+1] = criterion(v_outputs, v_targets.squeeze()).item()
+            val_loss_progress_dr2[e+1] = criterion(v_outputs.squeeze(), v_targets).item()
             accuracy_progress_dr2[e+1] = accuracy(v_outputs, v_targets)
 
 

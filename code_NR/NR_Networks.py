@@ -62,10 +62,10 @@ class Denoiser_2(nn.Module):
         
     
 class Learnable_Baseline(nn.Module):
-    def __init__(self):
+    def __init__(self, alpha=1.2, beta=0.2):
         super().__init__()
-        self.alpha = nn.Parameter(torch.tensor(1.2))
-        self.beta = nn.Parameter(torch.tensor(0.2))
+        self.alpha = nn.Parameter(torch.tensor(alpha))
+        self.beta = nn.Parameter(torch.tensor(beta))
 
     def forward(self, inputs, psi):
         Z_c1_active = inputs[:,0]

@@ -43,10 +43,11 @@ class CleanID(torch.utils.data.Dataset):
         this_path = self.data_list[idx].absolute().as_posix()
         bottleneck = torch.Tensor(np.load(this_path)).squeeze()
         speaker_id = int(this_path.split('speaker_')[1].split('/exp')[0])
-        target = torch.argmax((self.classes == speaker_id).int())
-        #target = (self.classes == speaker_id).nonzero(as_tuple=True)[0]
+        target = torch.tensor([self.classes[i] == speaker_id for i in range(6)], dtype=torch.float32)
+        #target = torch.argmax((self.classes == speaker_id).int())
+        ##target = (self.classes == speaker_id).nonzero(as_tuple=True)[0]
 
-        return bottleneck, target.long()
+        return bottleneck, target
     
 
 
@@ -358,9 +359,9 @@ class NoisyID(torch.utils.data.Dataset):
 
         return inputvec
 
-h = NoisyID()
-i = h[9]
-
+h = CleanID(train=True)
+i,t = h[9]
+print(i.size(), t)
 #a = FeatureFusionID(test=True)
 #for n in range(a.__len__()):
 #    i, t, c = a.__getitem__(n)

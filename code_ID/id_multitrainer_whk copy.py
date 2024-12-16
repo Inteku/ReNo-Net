@@ -9,9 +9,6 @@ from IdentificationDataset2 import NoisyID
 import SpeakerID
 from utilities import print_batch_loss, accuracy
 import matplotlib as mpl
-import matplotlib.pyplot as plt
-import random
-print('\033c')
 g, r, y, en = '\033[1m\033[92m', '\033[1m\033[31m', '\033[1m\033[33m', '\033[0m'
 yellow, orange, brown, purple, lightpurple, coral = (1, 0.7, 0), (1, 0.4, 0), (0.5, 0.2, 0), (0.8, 0, 1), (0.8, 0.6, 1), (1, 0, 0.4)
 
@@ -41,10 +38,13 @@ test_set_list.append(NoisyID(test=True, dereverberationMethod="neural net", nois
 test_set_names = ["clean", "noisy", "baseline", "baseline+", "Denoiser", "Dereverber+Denoiser"]
 num_test_sets = len(test_set_list)
 
-batch_size = 16
+batch_size = 4
 num_batches = ceil(train_set.__len__()/batch_size)
 valdata_size = val_set_list[0].__len__()
 testdata_size = test_set_list[0].__len__()
+import matplotlib.pyplot as plt
+import random
+print('\033c')
 
 train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
 val_loader_list = []
@@ -62,29 +62,28 @@ early_stopping_threshold = 3.45e-3
 
 epochs = int(input('Number of epochs?\n'))
 
-global_tloss = np.asarray([0.0] * epochs)
+global_tloss = np.zeros(epochs)
 
-global_vloss_list = [np.asarray([0.0]*(epochs+1))] * num_val_sets
+global_vloss_list = [np.zeros(epochs+1) for _ in range(num_val_sets)]
 
-global_accuracy_list = [np.asarray([0.0]*(epochs+1))] * num_val_sets
+global_accuracy_list = [np.zeros(epochs+1) for _ in range(num_val_sets)]
 
-K = 2
+K = 1
 
 box_list = [[]] * num_test_sets
 
 for k in range(K):
     #load network
     ID = SpeakerID.Identifier_v1()
-    optimizer = optim.Adam(ID.parameters(), lr=0.00002)
+    optimizer = optim.Adam(ID.parameters(), lr=2e-5)
 
-    val_loss_progress_list = [np.asarray([0.0]*(epochs+1))] * num_val_sets
-    accuracy_progress_list = [np.asarray([0.0]*(epochs+1))] * num_val_sets
-    print(accuracy_progress_list[0])
+    val_loss_progress_list = [np.zeros(epochs+1) for _ in range(num_val_sets)]
+    accuracy_progress_list = [np.zeros(epochs+1) for _ in range(num_val_sets)]
+
 
     for v in range(num_val_sets):
-        for idx, (v_inputs, v_targets) in enumerate(val_loader_list[v]):
+        for v_inputs, v_targets in val_loader_list[v]:
             v_outputs = ID(v_inputs)
-            print(v_inputs.size(), v_outputs.size(), v_targets.size())
             untrained_vloss = criterion(v_outputs.squeeze(), v_targets).item()
             val_loss_progress_list[v][0] += untrained_vloss
             accuracy_progress_list[v][0] += accuracy(v_outputs.squeeze(), v_targets)
@@ -102,7 +101,20 @@ for k in range(K):
     for e in range(epochs):
         train_running_loss = 0
         for idx, (inputs, target) in enumerate(train_loader):
-            output = ID(inputs)
+            output = ID(inputs)#.squeeze()
+            output = output.squeeze()
+            target = target.squeeze()
+            #print('\ninput\n', inputs.squeeze())
+            #for i, d in enumerate(debug):
+            #
+            #    print(f'\ndebug {i}\n', d.squeeze())
+
+            #print(output.size(), target.size())
+            #for p in ID.parameters():
+            #    if p.requires_grad:
+            #        print(p.data)
+            if torch.isnan(output).any():
+                break
             Loss = criterion(output, target)
 
             train_running_loss += Loss.item()
@@ -130,7 +142,7 @@ for k in range(K):
         for v in range(num_val_sets):
             for idx, (v_inputs, v_targets) in enumerate(val_loader_list[v]):
                 v_outputs = ID(v_inputs)
-                val_loss_progress_list[v][e+1] = criterion(v_outputs, v_targets.squeeze()).item()
+                val_loss_progress_list[v][e+1] = criterion(v_outputs.squeeze(), v_targets.squeeze()).item()
                 accuracy_progress_list[v][e+1] = accuracy(v_outputs, v_targets)
 
 
@@ -202,13 +214,15 @@ for v in range(num_val_sets):
 
 plt.vlines(x=epochs_of_early_stopping, ymin=0, ymax=1.7)
 plt.title('Loss')
-legend_names = val_set_names.insert(0, "Training")
-plt.legend(legend_names)
+val_set_names.insert(0, "Training")
+
+plt.legend(val_set_names)
 plt.ylim(bottom=0)
 
 plt.subplot(2,1,2)
-for t_ in range(num_test_sets):
-    plt.plot(t, global_accuracy_list[t_]/K, color=val_set_colors[t_]) 
+val_set_names.pop(0)
+for v in range(num_val_sets):
+    plt.plot(t, global_accuracy_list[v]/K, color=val_set_colors[v]) 
 plt.plot(t, [1]*(epochs+1), color=(0,.3,0), linestyle='dashed')
 plt.plot(t, [1/6]*(epochs+1), color=(.7,0,0), linestyle='dashed')
 plt.title('Accuracy')

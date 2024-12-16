@@ -6,14 +6,15 @@ import Datasets
 
 
 
-dataset = Datasets.Noise_Reduction_Dataset()
+dataset = Datasets.Noise_Reduction_Dataset(dereverber=None)
 D = dataset.__len__()
 naughty_list = []
 for i in range(D):
-    sus = dataset.__getitem__(i)
-    if torch.sum(torch.isnan(sus)) > 0:
+    sus, _ = dataset.__getitem__(i)
+    if torch.sum(torch.isnan(sus[0])) > 0:
         print(i)
         naughty_list.append(i)
+print('#=',len(naughty_list))
 
 #np.save('naughty_list', naughty_list)
 '''

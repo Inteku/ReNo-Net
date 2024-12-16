@@ -35,9 +35,9 @@ AE_model.load_state_dict(torch.load('/home/student/Desktop/Code_BA_Intek/Trainie
 
 
 def dominant_mic(exp,speaker):
-    closest_clusters = open('/home/student/Documents/WHK_Projekt_1/work/experiments/exp_'+str(exp)+'/closest_clusters.json')
-    clusters = open('/home/student/Documents/WHK_Projekt_1/work/experiments/exp_'+str(exp)+'/clusters.json')
-    memberships = open('/home/student/Documents/WHK_Projekt_1/work/experiments/exp_'+str(exp)+'/memberships.json')
+    closest_clusters = open('/home/student/Desktop/Code_BA_Intek/work/experiments/exp_'+str(exp)+'/closest_clusters.json')
+    clusters = open('/home/student/Desktop/Code_BA_Intek/work/experiments/exp_'+str(exp)+'/clusters.json')
+    memberships = open('/home/student/Desktop/Code_BA_Intek/work/experiments/exp_'+str(exp)+'/memberships.json')
     closest_clusters = json.load(closest_clusters)
     clusters = json.load(clusters)
     memberships = json.load(memberships)
@@ -54,7 +54,7 @@ def dominant_mic(exp,speaker):
     return dominant_mic
 
 def get_cluster_similarities(exp, active_spk, n0_spk, n1_spk, n2_spk):
-    sims = json.load(open('/home/student/Documents/WHK_Projekt_1/work/experiments/exp_'+str(exp)+'/similarities.json'))
+    sims = json.load(open('/home/student/Desktop/Code_BA_Intek/work/experiments/exp_'+str(exp)+'/similarities.json'))
     dominant_mic_active_cluster = dominant_mic(exp,active_spk)
     #similarity between Z(active) and Z(noise 0)
     sim_Za_Zn0 = (1 + sims['similarities'][dominant_mic_active_cluster][dominant_mic(exp,n0_spk)])/2
@@ -69,8 +69,8 @@ def get_cluster_similarities(exp, active_spk, n0_spk, n1_spk, n2_spk):
 for active_speaker in range(4):
     for exp in range(200):
         print(f'\n\nExperiment {exp+1}:\n')
-        experiment_dict = json.load(open('/home/student/Documents/WHK_Projekt_1/work/ae_sins/'+str(exp)+'.json'))
-        loadpath_prefix = '/home/student/Documents/WHK_Projekt_1'
+        experiment_dict = json.load(open('/home/student/Desktop/Code_BA_Intek/work/ae_sins/'+str(exp)+'.json'))
+        loadpath_prefix = '/home/student/Desktop/Code_BA_Intek'
         savepath_prefix = '/home/student/Documents/WHK_Projekt_1/work_remastered/DATA/NR/NR_unfused/'###############
 
         speaker = experiment_dict['speaker_data'][active_speaker]['speaker']
@@ -103,7 +103,16 @@ for active_speaker in range(4):
             os.makedirs(path_to_sample, exist_ok=True)
             target_audio = torch.Tensor(0)
             for input in range(4): #inputs for NR
+                break
+                #print(f'-input {input}')
                 is_active = (input==active_speaker)
+                #print(is_active)
+                if is_active:
+                    #print('   active')
+                    audio_path = experiment_dict['data'][0]['audio'][active_speaker+4*seq]
+                    audio_of_active_spk, fs = librosa.load(loadpath_prefix+audio_path)
+                    #print(f'   fs {fs}')
+                    target_audio = torch.Tensor(audio_of_active_spk[0:160000]).squeeze().unsqueeze(0)
                 filename = ''
                 id_of_inputcluster = closest_clusters[input]
                 nodes_of_inputcluster = clusters[input]
@@ -111,19 +120,24 @@ for active_speaker in range(4):
                 node_signal_tensor = torch.zeros((num_signals,160000))
 
                 for spk in range(4): #all 4 speakers that contribute to overlap
+                    print(f' -overlap speaker {spk}')
                     cc = closest_clusters[spk]
                     nodes_in_cc = clusters[spk]
                     num_nodes_in_cc = len(nodes_in_cc)
                 # node_signals_in_cc = torch.zeros((num_nodes_in_cc,16e4))
                     audio_path = experiment_dict['data'][0]['audio'][spk+4*seq]
+                    #print(audio_path)
                     audio_of_this_spk,_ = librosa.load(loadpath_prefix+audio_path)
-                    if is_active:
-                        target_audio = torch.Tensor(audio_of_this_spk[0:160000]).squeeze().unsqueeze(0)
+                    #if is_active:
+                    #    print('   active')
+                    #    target_audio = audio_of_this_spk[0:160000]
+                        
 
                     for node in range(num_signals): #for every node of inputcluster
                         ir_path = experiment_dict['data'][nodes_of_inputcluster[node]]['ir'][spk]
                         ir,_ = librosa.load(loadpath_prefix+ir_path)
                         node_signal = utilities.conv(audio_of_this_spk, ir)
+                        
                         node_signal_tensor[node] = node_signal_tensor[node] + torch.Tensor(node_signal[0:160000])
 
                 final_input = feature_extraction(node_signal_tensor, 16e3, AE_model, exp, id_of_inputcluster, is_target=False)
@@ -133,9 +147,9 @@ for active_speaker in range(4):
                 else:
                     filename = 'Z_active'
                     np.save(path_to_sample+'/'+filename, final_input.detach().numpy())
-                
-            final_target = feature_extraction(target_audio, 16e3, AE_model, is_target=True)
-            np.save(path_to_sample+'/Z_target', final_target.detach().numpy())
+    
+            #final_target = feature_extraction(target_audio, 16e3, AE_model, is_target=True)
+            #np.save(path_to_sample+'/Z_target', final_target.detach().numpy())
 
             np.save(path_to_sample+'/cluster_similarities', cluster_similarities)
            # nodes_and_exp = nodes_in_cc

@@ -19,7 +19,7 @@ import os
 
 print('\033c')
 batch_size = 1
-learning_rate = 5e-5
+learning_rate = 1e-5
 # load decoder
 DEC = torch.load('AE_BA_trained_280')
 DEC.decode_only()
@@ -27,8 +27,11 @@ def repeater(x):
     return x
 DEC = repeater
 
+dr = "/home/student/Documents/WHK_Projekt_1/code_DR/Dereverber_saves/DR-S1L_candidate"
+#dr = None
+
 #initialize nn model
-load = False#bool(int(input('Load trained Network? (0/1) >')))
+load = True#bool(int(input('Load trained Network? (0/1) >')))
 train = True#bool(int(input('Train Network? (0/1) >')))
 if train:
     epochs = int(input('How many epochs? >'))
@@ -42,17 +45,21 @@ while os.path.exists(save_dir+today_date):
      exist_counter += 1
 os.makedirs(save_dir+today_date, exist_ok=False)
 savename = 'DN3_trainedonDR_' + today_date
+if dr == None:
+     savename = 'DN3_trainedonFF_' + today_date
 
-
+isLB = False
+alpha0 = 10.0
+beta0 = -9.0
 if load:
-    NN = torch.load('best_NN42')
+    NN = torch.load('/home/student/Documents/WHK_Projekt_1/code_NR/Denoiser_saves/261124(8)/DN3_trainedonDR_261124(8)_10*')
 else:
-    #NN = net.Learnable_Baseline()
     NN = net.Denoiser_3()
+if isLB:
+     NN = net.Learnable_Baseline(alpha0,beta0)
 
 #import sets
-dr = "/home/student/Documents/WHK_Projekt_1/code_DR/Dereverber_saves/DR-S1L_candidate"
-#dr = None
+
 train_set = Datasets.Noise_Reduction_Dataset(train=True, shuffle_seed=555, dereverber=dr)
 valid_set = Datasets.Noise_Reduction_Dataset(validate=True, shuffle_seed=555, dereverber=dr)
 test_set = Datasets.Noise_Reduction_Dataset(test=True, shuffle_seed=555, dereverber=dr)
@@ -77,7 +84,7 @@ loss_function = nn.MSELoss()
 avg_losses = []
 val_losses = []
 lmbe_losses = []
-
+g, r, y, en = '\033[1m\033[92m', '\033[1m\033[31m', '\033[1m\033[33m', '\033[0m'
 
 print('\n\033[47m\033[30m Computing loss of untrained model \033[0m\n\nTrain set:\n')
 running_loss = 0
@@ -89,6 +96,9 @@ for idx, (sample, sim) in enumerate(train_loader):
     loss = loss_function(DEC(Z_pred), DEC(target))
     running_loss += loss.item()
     print_batch_loss(idx, 0, num_batches, loss.item())
+    if torch.isnan(loss):
+        input(f'\n{r}NAN DETECTED\nInput: {torch.sum(torch.isnan(inputs))>0}\nOutput: {torch.sum(torch.isnan(Z_pred))>0}\nTarget: {torch.sum(torch.isnan(target))>0}{en}')
+        print(target)
     c += 1
 avg_losses.append(running_loss/c)
 print('\n\nValidation set:\n')
@@ -101,15 +111,17 @@ for idx, (sample, sim) in enumerate(valid_loader):
     loss = loss_function(DEC(Z_pred), DEC(target))
     running_loss += loss.item()
     print_batch_loss(idx, 0, valid_set.__len__(), loss.item())
+    if torch.isnan(loss):
+        input(f'\n{r}NAN DETECTED{en}')
     c += 1
 val_losses.append(running_loss/c)
  
 previous_loss = 1000
-g, r, y, en = '\033[1m\033[92m', '\033[1m\033[31m', '\033[1m\033[33m', '\033[0m'
+
 color = g
 
-alpha_progress = [1.2]
-beta_progress = [0.2]
+alpha_progress = [alpha0]
+beta_progress = [beta0]
 
 #training loop
 if train:
@@ -134,17 +146,20 @@ if train:
             optimizer.step()
 
             print_batch_loss(idx, e+1, num_batches, loss.item())
+            if torch.isnan(loss):
+                input(f'\n{r}NAN DETECTED{en}')
 
         ####
-        #print('\n')
-        #for name, param in NN.named_parameters():
-        #    if param.requires_grad:
-        #        print(f'{name} = {param.data:.5f}')
-        #        if name == "alpha":
-        #             alpha_progress.append(param.data.clone())
-        #        if name == "beta":
-        #             beta_progress.append(param.data.clone())
-        #print(alpha_progress)
+        if isLB:
+            print('\n')
+            for name, param in NN.named_parameters():
+                if param.requires_grad:
+                    print(f'{name} = {param.data:.5f}')
+                    if name == "alpha":
+                        alpha_progress.append(param.data.clone())
+                    if name == "beta":
+                        beta_progress.append(param.data.clone())
+            #print(alpha_progress)
 
         avrg_loss = float((running_loss/num_batches))
         avg_losses.append(avrg_loss)
@@ -257,11 +272,12 @@ if train:
     plt.title(savename)
     plt.show()
 #for trainable baseline only
-   # plt.figure()
-   # plt.plot(range(epochs+1), alpha_progress, color='r')
-   # plt.plot(range(epochs+1), beta_progress, color='y')
-   # plt.legend(['alpha', 'beta'])
-   # plt.show()
+if isLB:
+    plt.figure()
+    plt.plot(range(epochs+1), alpha_progress, color='r')
+    plt.plot(range(epochs+1), beta_progress, color='y')
+    plt.legend(['alpha', 'beta'])
+    plt.show()
 
 
 #val_data = test_set.__getitem__(rnd.randint(0,test_set.__len__()-1))

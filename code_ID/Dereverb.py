@@ -6,7 +6,37 @@ import json
 from utilities import get_memberships
 print('\033c')
 
+class Baseline():
+    def average(self, all_x, numInputs):
+        x = torch.zeros(1,280)
+        for inputs_idx in range(numInputs):
+            x += all_x[inputs_idx].unsqueeze(0)
+        x = x / numInputs
+        return x
+    
+    def single_node(self, all_x):
+        return all_x[0].unsqueeze(0)
+    
+    def feature_fusion(self, num_exp, node_list, highlevels, feature_size=280):
 
+        #load json-data
+        #load_prefix = '/home/student/Documents/BA/work/experiments/exp_'
+        #memberships_data = open(load_prefix + str(num_exp) + '/memberships.json')
+        #memberships = json.load(memberships_data) 
+        #memberships = list(memberships.values())[0]
+        memberships = get_memberships(num_exp)
+
+        sum = torch.zeros(1,feature_size)
+        sum_memberships = 0
+        for node_idx in range(len(node_list)):
+            this_node = node_list[node_idx]
+            membership = memberships[this_node]
+            sum += membership * highlevels[node_idx].unsqueeze(0)
+            sum_memberships += membership
+        
+        Z_dach = sum/sum_memberships
+
+        return Z_dach
     
 
 class siameseDereverberMemb(nn.Module):
