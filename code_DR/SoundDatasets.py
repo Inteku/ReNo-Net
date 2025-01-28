@@ -19,9 +19,9 @@ class CleanDataset(torch.utils.data.Dataset):
         if not (train ^ test):
             print("ERROR, SELECT ONE SUBSET ('train' OR 'test')")
         elif train:
-            self.folder_path = '/home/student/Documents/Praxisprojekt_2022/work/Clustering+WWD/non_ww_speakers_short/'
+            self.folder_path = '/home/student/Documents/Praxisprojekt_2022/work/work/Clustering+WWD/non_ww_speakers_short/'
         elif test:
-            self.folder_path = '/home/student/Documents/Praxisprojekt_2022/work/Clustering+WWD/ww_speakers_short/'
+            self.folder_path = '/home/student/Documents/Praxisprojekt_2022/work/work/Clustering+WWD/ww_speakers_short/'
         
         self.data = []
 

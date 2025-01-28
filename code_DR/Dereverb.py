@@ -630,14 +630,14 @@ class siameseDereverberMemb(nn.Module):
 
 
     def forward(self, all_x, exp_and_nodes):
-        activation = nn.Sigmoid()
+        activation = nn.ReLU()#nn.Sigmoid() #fatal
         if self.is_Ecapa:
             activation = nn.Tanhshrink()
 
         exp = exp_and_nodes[0]
         nodes = exp_and_nodes[1]
         n = len(nodes)
-        memberships = torch.Tensor(get_memberships(exp))
+        memberships = torch.tensor(get_memberships(exp))
         this_memberships = memberships[nodes]
 
         weighted_sum = torch.zeros(self.feature_size)
@@ -654,7 +654,8 @@ class siameseDereverberMemb(nn.Module):
         return weighted_sum / membership_sum
     
 
-dr = siameseDereverberMemb(280, num_layers=1)
-x = torch.ones(10,280)
-ean = [91, [22, 24, 26]]
-x = dr(x, ean)
+if __name__ == "__main__":
+    dr = siameseDereverberMemb(280, num_layers=1)
+    x = torch.ones(10,280)
+    ean = [91, [22, 24, 26]]
+    x = dr(x, ean)

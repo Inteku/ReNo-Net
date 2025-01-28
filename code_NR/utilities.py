@@ -7,6 +7,8 @@ from torch import nn
 import json
 from scipy.io import wavfile
 import librosa
+import hashlib
+import base64
 #import NR_Baseline as nr
 #import Datasets_NR as set
 #import NoiseReduction as nr
@@ -37,13 +39,13 @@ def lmbe(signal, sr):
     melspec = mel_spectrogram(signal)#.narrow(2, 0, 312)
     #melspec = torch.multiply(melspec, 1/peak)
     lmbe = np.log10(melspec)
-    lmbe = torch.add(lmbe, lmbe.min().abs())
+    lmbe = torch.add(lmbe, -lmbe.min())
     lmbe = torch.multiply(lmbe, 1/lmbe.max())
     #print(torch.max(lmbe), torch.min(lmbe))
     return lmbe
 
 def conv(audio,ir):
-    audio = audio.astype(np.float32) #datentyp auf float ändern
+    audio = audio[0].astype(np.float32) #datentyp auf float ändern
     ir = S.signal.resample(ir, 16000) #impulsantort muss auf Abtsastrate der sprechnersignale herunter gesamplet werden
     signal = S.signal.convolve(audio, ir) # faltung um signal von sprecher an mic zu erhalten
     return signal
@@ -266,3 +268,39 @@ def get_memberships(exp):
     memberships = list(memberships.values())[0]
     return memberships
 
+def model_hash(model):
+    """
+    Berechnet einen starken Hash-Wert für die Parameter eines PyTorch-Modells und gibt ihn in Base64 aus.
+
+    Args:
+        model (torch.nn.Module): Das PyTorch-Modell.
+
+    Returns:
+        str: Ein Base64-kodierter Hash-Wert.
+    """
+    # Liste für alle Parameter als Byte-Repräsentation
+    param_list = []
+    with torch.no_grad():
+        for param in model.parameters():
+            param_list.append(param.detach().cpu().numpy().tobytes())  # Konvertiert in Bytes
+
+    # Verketten aller Byte-Daten
+    param_bytes = b"".join(param_list)
+
+    # MD5-Hash des Byte-Streams
+    md5_hash = hashlib.md5(param_bytes).digest()  # Erzeugt binären Hash
+
+    # Umwandlung des binären Hash in Base64
+    base64_hash = base64.b64encode(md5_hash).decode('utf-8')
+    return base64_hash
+
+import ConvAutoEncoder
+def bottleneck_from_dir(dir:str):
+    ae = ConvAutoEncoder.Mel_AutoEncoder_280()
+    ae.load_state_dict(torch.load('/home/student/Desktop/Code_BA_Intek/Trainierte Modelle/AE280_final'))
+    ae.encode_only()
+    audio = np.zeros((1, 160_000), dtype=np.float32)
+    audio[0, :159_999] = librosa.load('/home/student/Desktop/Code_BA_Intek'+dir, sr=16e3)[0]
+    spectrogram = lmbe(torch.tensor(audio, dtype=torch.float32), sr=16e3)
+    bottleneck = ae(spectrogram.narrow(2,0,312))
+    return bottleneck.squeeze()

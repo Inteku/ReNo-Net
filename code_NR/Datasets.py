@@ -9,11 +9,13 @@ print('\033c')
 class Noise_Reduction_Dataset(torch.utils.data.Dataset):
     def __init__(self, train=False, test=False, validate=False, dereverber=None, test_size=300, validation_size=300, shuffle_seed=280):
         
+        flag = 'unfused4'
+
         self.isDereverber = False
         if dereverber == None: #clusters are fused by feature fusion / use FF set
-            path_prefix = '/home/student/Documents/WHK_Projekt_1/work_remastered/DATA/NR/NR_feature_fusion/'
+            path_prefix = f'/home/student/Documents/WHK_Projekt_1/work_remastered/DATA/NR/NR_{flag}/'
         else: #clusters are fused using dereverber / use unfused set
-            path_prefix = '/home/student/Documents/WHK_Projekt_1/work_remastered/DATA/NR/NR_unfused/'
+            path_prefix = f'/home/student/Documents/WHK_Projekt_1/work_remastered/DATA/NR/NR_{flag}/'
             self.DR_model = Dereverb.siameseDereverberMemb(feature_size=280, num_layers=1)
             self.DR_model.load_state_dict(torch.load(dereverber))
             self.isDereverber = True
@@ -49,7 +51,7 @@ class Noise_Reduction_Dataset(torch.utils.data.Dataset):
             m = total_len
             self.all_paths_to_samples = self.all_paths_to_samples[n:m]
 
-        empirical_mean_max = 35.67011642456055
+        empirical_mean_max = 1#35.67011642456055
         self.normalization_factor = 1/empirical_mean_max
 
 
@@ -61,17 +63,17 @@ class Noise_Reduction_Dataset(torch.utils.data.Dataset):
        
         sample = torch.zeros(5,280)
         #target
-        sample[0,:] = torch.Tensor(np.load(path_to_sample + '/Z_target.npy'))
+        sample[0,:] = torch.tensor(np.load(path_to_sample + '/Z_target.npy'))
         if not self.isDereverber:            
             #inputs
             #sample[1,:] = 20*torch.log10(torch.tensor(np.load(path_to_sample + '/Z_active.npy'))+1) 
             #sample[2,:] = 20*torch.log10(torch.tensor(np.load(path_to_sample + '/Z_noise_0.npy'))+1)
             #sample[3,:] = 20*torch.log10(torch.tensor(np.load(path_to_sample + '/Z_noise_1.npy'))+1) 
             #sample[4,:] = 20*torch.log10(torch.tensor(np.load(path_to_sample + '/Z_noise_2.npy'))+1) 
-            sample[1,:] = torch.Tensor(np.load(path_to_sample + '/Z_active.npy'))
-            sample[2,:] = torch.Tensor(np.load(path_to_sample + '/Z_noise_1.npy'))
-            sample[3,:] = torch.Tensor(np.load(path_to_sample + '/Z_noise_2.npy'))
-            sample[4,:] = torch.Tensor(np.load(path_to_sample + '/Z_noise_3.npy')) #0,1,2->1,2,3
+            sample[1,:] = torch.tensor(np.load(path_to_sample + '/Z_active.npy'))
+            sample[2,:] = torch.tensor(np.load(path_to_sample + '/Z_noise_1.npy'))
+            sample[3,:] = torch.tensor(np.load(path_to_sample + '/Z_noise_2.npy'))
+            sample[4,:] = torch.tensor(np.load(path_to_sample + '/Z_noise_3.npy')) #0,1,2->1,2,3
             sample = sample.detach()
             sample *= self.normalization_factor
         else:
@@ -79,19 +81,19 @@ class Noise_Reduction_Dataset(torch.utils.data.Dataset):
                 nodes = pickle.load(fp)
             exp = int(path_to_sample.split('exp_')[1].split('_as')[0])
 
-            unfused_active = torch.Tensor(np.load(path_to_sample + '/Z_active.npy'))
+            unfused_active = torch.tensor(np.load(path_to_sample + '/Z_active.npy'))
             sample[1,:] = self.DR_model(unfused_active, [exp, nodes[0]])
 
-            unfused_noise0 = torch.Tensor(np.load(path_to_sample + '/Z_noise_1.npy'))
+            unfused_noise0 = torch.tensor(np.load(path_to_sample + '/Z_noise_1.npy'))
             sample[2,:] = self.DR_model(unfused_noise0, [exp, nodes[1]])
-            unfused_noise1 = torch.Tensor(np.load(path_to_sample + '/Z_noise_2.npy'))
+            unfused_noise1 = torch.tensor(np.load(path_to_sample + '/Z_noise_2.npy'))
             sample[3,:] = self.DR_model(unfused_noise1, [exp, nodes[2]])
-            unfused_noise2 = torch.Tensor(np.load(path_to_sample + '/Z_noise_3.npy')) #changed obo error 0,1,2->1,2,3
+            unfused_noise2 = torch.tensor(np.load(path_to_sample + '/Z_noise_3.npy')) #changed obo error 0,1,2->1,2,3
             sample[4,:] = self.DR_model(unfused_noise2, [exp, nodes[3]])
 
             sample *= self.normalization_factor
 
-        similarities = torch.Tensor(np.load(path_to_sample + '/cluster_similarities.npy'))
+        similarities = torch.tensor(np.load(path_to_sample + '/cluster_similarities.npy'))
         #row 0: target
         #row 1: active input
         #row 2-4: noise inputs
@@ -99,12 +101,23 @@ class Noise_Reduction_Dataset(torch.utils.data.Dataset):
     
         return sample, similarities
 
-#dr = "/home/student/Documents/WHK_Projekt_1/code_DR/Dereverber_saves/DR-S1L_candidate"
-#dataset_dr = Noise_Reduction_Dataset(dereverber=dr)
-dataset_ff = Noise_Reduction_Dataset(dereverber=None)
-#sample_dr, _ = dataset_dr[5]
-#sample_ff, _ = dataset_ff[5]
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
 
-#print(len(dataset_ff))
+    dr = "/home/student/Documents/WHK_Projekt_1/code_DR/Dereverber_saves/DR-S1L_candidate"
+    
+    S = Noise_Reduction_Dataset(test=True, dereverber=dr)
+
+    im = np.zeros((len(S), 280))
+    for idx in range(len(S)):
+        clean = S[idx][0][1].detach()
+        im[idx] = clean
+        if idx < 10:
+            print(clean.max())
+
+    plt.imshow(im, cmap='gray', vmax=1, aspect='auto')
+    plt.colorbar()
+    plt.show()
+
 
 

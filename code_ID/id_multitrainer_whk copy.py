@@ -19,9 +19,9 @@ val_set_list = []
 val_set_list.append(NoisyID(clean=True, validation=True)) #clean val
 val_set_list.append(NoisyID(validation=True, dereverberationMethod=None, noiseReductionMethod=None)) #noisy val
 val_set_list.append(NoisyID(validation=True, dereverberationMethod="baseline", noiseReductionMethod="baseline", alphabeta=[1.2,0.2])) #default baseline val
-val_set_list.append(NoisyID(validation=True, dereverberationMethod="baseline", noiseReductionMethod="baseline", alphabeta=[0.246,-0.754])) #optimal baseline val
+#val_set_list.append(NoisyID(validation=True, dereverberationMethod="baseline", noiseReductionMethod="baseline", alphabeta=[0.246,-0.754])) #optimal baseline val
 val_set_list.append(NoisyID(validation=True, dereverberationMethod="baseline", noiseReductionMethod="neural net")) #neural NR val
-val_set_list.append(NoisyID(validation=True, dereverberationMethod="neural net", noiseReductionMethod="neural net")) #neural DR + neural NR val
+#val_set_list.append(NoisyID(validation=True, dereverberationMethod="neural net", noiseReductionMethod="neural net")) #neural DR + neural NR val
 
 val_set_names = ["clean val.", "noisy val.", "baseline val.", "baseline+ val.", "Denoiser val.", "Dereverber+Denoiser val."]
 val_set_colors = ['g', brown, orange, yellow, lightpurple, coral]
@@ -29,11 +29,11 @@ num_val_sets = len(val_set_list)
 
 test_set_list = []
 test_set_list.append(NoisyID(clean=True, test=True)) #clean test
-test_set_list.append(NoisyID(test=True, dereverberationMethod=None, noiseReductionMethod=None)) #noisy test
-test_set_list.append(NoisyID(test=True, dereverberationMethod="baseline", noiseReductionMethod="baseline", alphabeta=[1.2,0.2])) #default baseline test
-test_set_list.append(NoisyID(test=True, dereverberationMethod="baseline", noiseReductionMethod="baseline", alphabeta=[0.246,-0.754])) #optimal baseline test
-test_set_list.append(NoisyID(test=True, dereverberationMethod="baseline", noiseReductionMethod="neural net")) #neural NR test
-test_set_list.append(NoisyID(test=True, dereverberationMethod="neural net", noiseReductionMethod="neural net")) #neural DR + neural NR test
+#test_set_list.append(NoisyID(test=True, dereverberationMethod=None, noiseReductionMethod=None)) #noisy test
+#test_set_list.append(NoisyID(test=True, dereverberationMethod="baseline", noiseReductionMethod="baseline", alphabeta=[1.2,0.2])) #default baseline test
+#test_set_list.append(NoisyID(test=True, dereverberationMethod="baseline", noiseReductionMethod="baseline", alphabeta=[0.246,-0.754])) #optimal baseline test
+#test_set_list.append(NoisyID(test=True, dereverberationMethod="baseline", noiseReductionMethod="neural net")) #neural NR test
+#test_set_list.append(NoisyID(test=True, dereverberationMethod="neural net", noiseReductionMethod="neural net")) #neural DR + neural NR test
 
 test_set_names = ["clean", "noisy", "baseline", "baseline+", "Denoiser", "Dereverber+Denoiser"]
 num_test_sets = len(test_set_list)
@@ -82,7 +82,7 @@ for k in range(K):
 
 
     for v in range(num_val_sets):
-        for v_inputs, v_targets in val_loader_list[v]:
+        for v_inputs, v_targets, *_ in val_loader_list[v]:
             v_outputs = ID(v_inputs)
             untrained_vloss = criterion(v_outputs.squeeze(), v_targets).item()
             val_loss_progress_list[v][0] += untrained_vloss
@@ -100,7 +100,7 @@ for k in range(K):
     print(f'Average loss will be {g}BETTER{en} or {r}WORSE{en} than the previous\n')
     for e in range(epochs):
         train_running_loss = 0
-        for idx, (inputs, target) in enumerate(train_loader):
+        for idx, (inputs, target, *_) in enumerate(train_loader):
             output = ID(inputs)#.squeeze()
             output = output.squeeze()
             target = target.squeeze()
@@ -140,7 +140,7 @@ for k in range(K):
 
 
         for v in range(num_val_sets):
-            for idx, (v_inputs, v_targets) in enumerate(val_loader_list[v]):
+            for idx, (v_inputs, v_targets, *_) in enumerate(val_loader_list[v]):
                 v_outputs = ID(v_inputs)
                 val_loss_progress_list[v][e+1] = criterion(v_outputs.squeeze(), v_targets.squeeze()).item()
                 accuracy_progress_list[v][e+1] = accuracy(v_outputs, v_targets)
@@ -154,7 +154,7 @@ for k in range(K):
             epochs_of_early_stopping.append(e+1)
 
             for t in range(len(test_loader_list)):
-                for idx, (t_inputs, t_targets) in enumerate(test_loader_list[t]):
+                for idx, (t_inputs, t_targets, *_) in enumerate(test_loader_list[t]):
                     t_outputs = ID(t_inputs)
                     box_list[t].append(accuracy(t_outputs, t_targets))
 

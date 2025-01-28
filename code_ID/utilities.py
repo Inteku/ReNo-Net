@@ -25,12 +25,13 @@ def lmbe(signal, sr):
         n_mels=n_mels,
         mel_scale="htk",
     )
-    melspec = torch.log10(mel_spectrogram(signal)+1e-9)
-    melspec = torch.add(melspec, -1*melspec.min())
-    melspec = torch.multiply(melspec, 1/melspec.max())
-   # peak = max(melspec.min().abs(), melspec.max())
+    melspec = mel_spectrogram(signal)#.narrow(2, 0, 312)
     #melspec = torch.multiply(melspec, 1/peak)
-    return melspec
+    lmbe = np.log10(melspec)
+    lmbe = torch.add(lmbe, -lmbe.min())
+    lmbe = torch.multiply(lmbe, 1/lmbe.max())
+    #print(torch.max(lmbe), torch.min(lmbe))
+    return lmbe
 
 
 def conv(audio,ir):

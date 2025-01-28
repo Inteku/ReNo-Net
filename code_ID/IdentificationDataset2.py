@@ -30,13 +30,14 @@ class NoisyID(torch.utils.data.Dataset): #all in one dataset
         self.alphabeta = alphabeta
         self.dr_method = dereverberationMethod
         self.is_clean_data = clean
-        self.path = "/home/student/Documents/WHK_Projekt_1/work_remastered/DATA/ID_data/ID_unfused2/"
+        self.dir = "ID_unfused_aereset"#########
+        self.path = "/home/student/Documents/WHK_Projekt_1/work_remastered/DATA/ID_data/"+self.dir+"/"
         self.input_list = []
         for dirpath, dirnames, filenames in os.walk(self.path):
             if not dirnames:
                 self.input_list.append(dirpath)
         random.seed(0)
-        #random.shuffle(self.input_list)
+        random.shuffle(self.input_list)
         nan_idx_list = [453, 357, 164, 121]
         for nan_idx in nan_idx_list:
             self.input_list.pop(nan_idx)
@@ -96,7 +97,7 @@ class NoisyID(torch.utils.data.Dataset): #all in one dataset
     def __getitem__(self, idx):
         item_path = self.input_list[idx]
         #print(item_path)
-        speaker_id = int(item_path.split('unfused2/')[1].split('/exp')[0])
+        speaker_id = int(item_path.split(self.dir+'/')[1].split('/exp')[0])
         #id_target = torch.argmax((self.classes == speaker_id).int()).long()
         id_target = torch.Tensor((self.classes == speaker_id).int().float())
 
@@ -117,7 +118,7 @@ class NoisyID(torch.utils.data.Dataset): #all in one dataset
         psi = torch.Tensor(np.load(item_path+"/cluster_similarities.npy")).unsqueeze(0)
 
         if self.is_clean_data:
-            return z_clean * self.normalization_factor, nn.functional.one_hot(torch.tensor(id_target), num_classes=6).float()
+            return z_clean , nn.functional.one_hot(torch.tensor(id_target), num_classes=6).float(), item_path
 
         dereverbed_clusters = torch.zeros((4,280))
         #DEREVERBERATION STAGE
@@ -145,7 +146,7 @@ class NoisyID(torch.utils.data.Dataset): #all in one dataset
         elif self.nr_method == "neural net":
             inputvec = self.Denoiser(dereverbed_clusters, psi).squeeze()
 
-        return inputvec, nn.functional.one_hot(torch.tensor(id_target), num_classes=6).float()
+        return inputvec, nn.functional.one_hot(torch.tensor(id_target), num_classes=6).float(), item_path
 
 S_clean = NoisyID(clean=True, train=True)
 S_no_no = NoisyID(noiseReductionMethod=None, dereverberationMethod=None)
@@ -154,7 +155,7 @@ S_bl_nn = NoisyID(noiseReductionMethod="neural net", dereverberationMethod="base
 S_nn_nn = NoisyID(noiseReductionMethod="neural net", dereverberationMethod="neural net")
 
 S = S_bl_nn
-inp, trg = S[100]
+inp, trg, *_ = S[100]
 print(inp.size(), trg)
 '''
 inp_nancount = 0

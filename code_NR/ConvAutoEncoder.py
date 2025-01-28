@@ -5,7 +5,7 @@ from torch import nn
 import keras.layers as kr
 print('\033c')
 
-
+'''
 class Mel_AutoEncoder_final(nn.Module):
 
     def __init__(self, **kwargs):
@@ -122,6 +122,8 @@ class Mel_AutoEncoder_final(nn.Module):
     def encode_decode(self):
         self.decode_only = False
 
+'''
+
 class Mel_AutoEncoder_280(nn.Module):
 
     def __init__(self, **kwargs):
@@ -233,7 +235,7 @@ class Mel_AutoEncoder_280(nn.Module):
         self.decode = True
 
 
-
+'''
 class Mel_AutoEncoder_280_regularized(nn.Module):
 
     def __init__(self, **kwargs):
@@ -352,5 +354,5 @@ class Mel_AutoEncoder_280_regularized(nn.Module):
     def encode_decode(self):
         self.encode = True
         self.decode = True
-
+'''
 

@@ -7,6 +7,7 @@ from utilities import get_memberships
 
 
 
+
 class siameseDereverberMemb(nn.Module):
     def __init__(self, feature_size, num_layers, is_Ecapa=False, **kwargs):
         super().__init__()
@@ -21,14 +22,14 @@ class siameseDereverberMemb(nn.Module):
 
 
     def forward(self, all_x, exp_and_nodes):
-        activation = nn.Sigmoid()
+        activation = nn.ReLU()#nn.Sigmoid() #fatal
         if self.is_Ecapa:
             activation = nn.Tanhshrink()
 
         exp = exp_and_nodes[0]
         nodes = exp_and_nodes[1]
         n = len(nodes)
-        memberships = torch.Tensor(get_memberships(exp))
+        memberships = torch.tensor(get_memberships(exp))
         this_memberships = memberships[nodes]
 
         weighted_sum = torch.zeros(self.feature_size)
@@ -43,3 +44,4 @@ class siameseDereverberMemb(nn.Module):
         membership_sum = sum(this_memberships)
 
         return weighted_sum / membership_sum
+    

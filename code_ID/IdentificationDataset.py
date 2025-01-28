@@ -47,7 +47,7 @@ class CleanID(torch.utils.data.Dataset):
         #target = torch.argmax((self.classes == speaker_id).int())
         ##target = (self.classes == speaker_id).nonzero(as_tuple=True)[0]
 
-        return bottleneck, target
+        return bottleneck, target, this_path
     
 
 
@@ -358,11 +358,3 @@ class NoisyID(torch.utils.data.Dataset):
             inputvec = self.Denoiser(dereverbed_clusters, psi)
 
         return inputvec
-
-h = CleanID(train=True)
-i,t = h[9]
-print(i.size(), t)
-#a = FeatureFusionID(test=True)
-#for n in range(a.__len__()):
-#    i, t, c = a.__getitem__(n)
-#    print(c)
